@@ -62,6 +62,17 @@ export async function checkUrls(urls: string[]): Promise<Map<string, boolean>> {
   return map;
 }
 
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/health`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export function formatResultsAsMarkdown(result: SEOResult): string {
   return `## ${result.h2}
 
