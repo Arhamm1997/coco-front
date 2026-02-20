@@ -12,8 +12,15 @@ import { ErrorState } from './components/error-state';
 import { SettingsPage } from './components/settings-page';
 
 import { AIProvider, SEOResult, PROVIDERS } from './lib/types';
-import { callAI, checkUrls } from './lib/api';
+import { callAI, checkUrls, UsageStats, fetchUsageStats } from './lib/api';
 import { useBackendHealth } from './hooks/useBackendHealth';
+
+export interface SessionUsage {
+  provider: AIProvider;
+  model: string;
+  tokensUsed: number;
+  timestamp: number;
+}
 
 const stepVariants = {
   initial: (direction: number) => ({
@@ -55,6 +62,18 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SEOResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Usage stats
+  const [sessionUsage, setSessionUsage] = useState<SessionUsage[]>([]);
+  const [globalStats, setGlobalStats] = useState<UsageStats | null>(null);
+  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+
+  const refreshGlobalStats = useCallback(async () => {
+    setIsRefreshingStats(true);
+    const stats = await fetchUsageStats();
+    setGlobalStats(stats);
+    setIsRefreshingStats(false);
+  }, []);
 
   const handleUrlsChange = useCallback((newUrls: string[], name: string) => {
     setUrls(newUrls);
@@ -123,6 +142,19 @@ export default function App() {
       setDirection(1);
       setStep(2);
       toast.success('SEO content generated successfully!');
+
+      // Track session usage
+      setSessionUsage((prev) => [
+        ...prev,
+        {
+          provider: provider!,
+          model: model || PROVIDERS.find((p) => p.id === provider)?.model || '',
+          tokensUsed: result.tokensUsed ?? 0,
+          timestamp: Date.now(),
+        },
+      ]);
+      // Refresh global stats from backend
+      refreshGlobalStats();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(message);
@@ -220,6 +252,10 @@ export default function App() {
                 onModelChange={setModel}
                 onApiKeyChange={setApiKey}
                 onClose={closeSettings}
+                sessionUsage={sessionUsage}
+                globalStats={globalStats}
+                onRefreshStats={refreshGlobalStats}
+                isRefreshingStats={isRefreshingStats}
               />
             </motion.div>
           ) : loading ? (
