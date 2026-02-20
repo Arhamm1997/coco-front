@@ -13,6 +13,7 @@ import { SettingsPage } from './components/settings-page';
 
 import { AIProvider, SEOResult, PROVIDERS } from './lib/types';
 import { callAI, checkUrls } from './lib/api';
+import { useBackendHealth } from './hooks/useBackendHealth';
 
 const stepVariants = {
   initial: (direction: number) => ({
@@ -32,6 +33,8 @@ const stepVariants = {
 };
 
 export default function App() {
+  const connectionStatus = useBackendHealth();
+
   // Main flow: step 1 = Content & Keyword, step 2 = Results
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
@@ -192,7 +195,7 @@ export default function App() {
       />
 
       {/* Navbar */}
-      <Navbar onSettingsClick={openSettings} />
+      <Navbar onSettingsClick={openSettings} connectionStatus={connectionStatus} />
 
       {/* Main Content */}
       <main className="relative z-10 max-w-4xl mx-auto px-4 py-10">
